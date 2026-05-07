@@ -1,0 +1,16 @@
+spring:
+  flyway:
+    enabled: true
+  jpa:
+    show-sql: true
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers}
+
+app:
+  jwt:
+    secret: test-secret-key-for-testing-only-404E635266556A586E32723575
+    expiration-ms: 3600000
+
+logging:
+  level:
+    com.rentalcar: DEBUG
