@@ -57,7 +57,7 @@ spring:
       acks: all
       retries: 3
       properties:
-        enable.idempotence: true
+        enable.idempotence: false
         max.in.flight.requests.per.connection: 1
     consumer:
       group-id: rental-car-group

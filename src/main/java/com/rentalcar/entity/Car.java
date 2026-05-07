@@ -19,7 +19,7 @@ import java.util.List;
         @Index(name = "idx_cars_city_status", columnList = "city, status")
     }
 )
-@SQLDelete(sql = "UPDATE cars SET deleted = true WHERE id = ?")
+@SQLDelete(sql = "UPDATE cars SET deleted = true WHERE id = ? AND version = ?")
 @SQLRestriction("deleted = false")
 @Getter
 @Setter

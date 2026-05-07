@@ -102,11 +102,10 @@ public class AuditLogService {
             .build());
     }
 
-    private void save(AuditLog log) {
+    private void save(AuditLog auditLog) {
         try {
-            auditLogRepository.save(log);
+            auditLogRepository.save(auditLog);
         } catch (Exception ex) {
-            // Audit failures must NEVER break the main flow
             log.warn("Failed to save audit log: {}", ex.getMessage());
         }
     }

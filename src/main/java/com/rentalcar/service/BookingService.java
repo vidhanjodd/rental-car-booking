@@ -10,6 +10,7 @@ import com.rentalcar.entity.User;
 import com.rentalcar.enums.BookingStatus;
 import com.rentalcar.enums.CarStatus;
 import com.rentalcar.exception.*;
+import com.rentalcar.kafka.BookingEventProducer;
 import com.rentalcar.repository.BookingRepository;
 import com.rentalcar.repository.CarRepository;
 import com.rentalcar.repository.UserRepository;
@@ -39,7 +40,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final CarRepository     carRepository;
     private final UserRepository    userRepository;
-
+    private final BookingEventProducer bookingEventProducer;
     // ── Create booking (PENDING) ───────────────────────────────────────────
     //
     // Concurrency strategy:
@@ -100,6 +101,7 @@ public class BookingService {
         carRepository.save(car);
 
         Booking saved = bookingRepository.save(booking);
+        bookingEventProducer.publishCreated(saved);
         log.info("Booking created: {} by user {} for car {} [{} → {}]",
             saved.getId(), user.getUsername(), car.getId(), req.getStartDate(), req.getEndDate());
 

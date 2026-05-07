@@ -27,7 +27,7 @@ public interface CarRepository extends JpaRepository<Car, UUID> {
     @Query("""
         SELECT c FROM Car c
         WHERE c.status = 'AVAILABLE'
-          AND (:city IS NULL OR LOWER(c.city) = LOWER(:city))
+            AND (:city IS NULL OR LOWER(c.city) = LOWER(CAST(:city AS string)))
           AND (:category IS NULL OR c.category = :category)
           AND (:minRate IS NULL OR c.dailyRate >= :minRate)
           AND (:maxRate IS NULL OR c.dailyRate <= :maxRate)

@@ -2,6 +2,7 @@ package com.rentalcar.config;
 
 import com.rentalcar.repository.UserRepository;
 import com.rentalcar.security.JwtAuthenticationFilter;
+import com.rentalcar.security.JwtTokenProvider;
 import com.rentalcar.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -34,9 +35,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthFilter;
-    private final UserRepository          userRepository;
-
+    private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
     private static final String[] PUBLIC_URLS = {
         "/api/auth/**",
@@ -47,9 +47,13 @@ public class SecurityConfig {
         "/actuator/info"
     };
 
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter(UserDetailsService userDetailsService) {
+        return new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService);
+    }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter) throws Exception {
         return http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
