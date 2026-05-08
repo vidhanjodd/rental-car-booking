@@ -44,10 +44,6 @@ public class Booking extends BaseEntity {
     @Builder.Default
     private BookingStatus status = BookingStatus.PENDING;
 
-    /**
-     * Total price = dailyRate × numberOfDays.
-     * Stored at booking time — rate changes don't affect existing bookings.
-     */
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
@@ -66,10 +62,6 @@ public class Booking extends BaseEntity {
     @Column(name = "cancellation_reason", columnDefinition = "TEXT")
     private String cancellationReason;
 
-    /**
-     * Optimistic locking on bookings as well —
-     * prevents concurrent status transitions.
-     */
     @Version
     @Column(name = "version", nullable = false)
     private Long version;

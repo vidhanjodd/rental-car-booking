@@ -1,7 +1,10 @@
 package com.rentalcar.audit;
 
 import com.rentalcar.dto.response.BookingResponse;
+import com.rentalcar.dto.response.CarResponse;
 import com.rentalcar.security.UserPrincipal;
+import com.rentalcar.service.BookingService;
+import com.rentalcar.service.CarService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -15,13 +18,7 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.UUID;
 
-/**
- * Cross-cutting audit concern: intercepts all public BookingService methods
- * and writes an audit record after successful execution.
- *
- * Uses @Around so we capture both input args and the returned value.
- * Audit write is async (inside AuditLogService) so it never slows down the main call.
- */
+
 @Aspect
 @Component
 @RequiredArgsConstructor
@@ -29,6 +26,8 @@ import java.util.UUID;
 public class AuditAspect {
 
     private final AuditLogService auditLogService;
+    private final CarService carService;
+    private final BookingService bookingService;
 
     @Pointcut("execution(public * com.rentalcar.service.BookingService.create(..))")
     private void bookingCreate() {}
@@ -45,22 +44,85 @@ public class AuditAspect {
     @Pointcut("execution(public * com.rentalcar.service.CarService.updateStatus(..))")
     private void carStatusUpdate() {}
 
+    @Pointcut("execution(public * com.rentalcar.service.CarService.update(..))")
+    private void carUpdate() {}
+
+    @Pointcut("execution(public * com.rentalcar.service.CarService.create(..))")
+    private void carCreate() {}
+
+    @Pointcut("execution(public * com.rentalcar.service.CarService.delete(..))")
+    private void carDelete() {}
+
+//    @Around("bookingCreate() || bookingConfirm() || bookingCancel() || bookingComplete()")
+//    public Object auditBookingOperation(ProceedingJoinPoint pjp) throws Throwable {
+//        String method = pjp.getSignature().getName();
+//        String actor  = resolveActor();
+//
+//        Object result = pjp.proceed();
+//
+//        if (result instanceof BookingResponse booking) {
+//            auditLogService.log(
+//                "Booking",
+//                booking.getId(),
+//                method.toUpperCase(),
+//                null,
+//                booking.getStatus().name(),
+//                actor,
+//                "BookingService." + method + " executed by " + actor
+//            );
+//        }
+//        return result;
+//    }
+//
+//    @Around("carStatusUpdate()")
+//    public Object auditCarStatusUpdate(ProceedingJoinPoint pjp) throws Throwable {
+//        Object[] args  = pjp.getArgs();
+//        UUID carId     = args.length > 0 ? (UUID) args[0] : null;
+//        String newStatus = args.length > 1 ? args[1].toString() : "UNKNOWN";
+//        String actor   = resolveActor();
+//
+//        Object result = pjp.proceed();
+//
+//        auditLogService.log(
+//            "Car", carId, "STATUS_CHANGE",
+//            null, newStatus, actor,
+//            "Car status changed to " + newStatus + " by " + actor
+//        );
+//        return result;
+//    }
+
+
     @Around("bookingCreate() || bookingConfirm() || bookingCancel() || bookingComplete()")
     public Object auditBookingOperation(ProceedingJoinPoint pjp) throws Throwable {
         String method = pjp.getSignature().getName();
         String actor  = resolveActor();
 
+        // ── Capture old status BEFORE executing ──────────────────────────────
+        String oldStatus = null;
+        Object[] args = pjp.getArgs();
+
+        // For confirm/cancel/complete, first arg is the bookingId (UUID)
+        // For create, there is no old status
+        if (!method.equals("create") && args.length > 0 && args[0] instanceof UUID bookingId) {
+            try {
+                BookingResponse existing = bookingService.getByIdInternal(bookingId);
+                oldStatus = existing.getStatus().name();
+            } catch (Exception e) {
+                log.warn("Could not fetch old booking status for audit: {}", e.getMessage());
+            }
+        }
+
         Object result = pjp.proceed();   // execute the real method
 
         if (result instanceof BookingResponse booking) {
             auditLogService.log(
-                "Booking",
-                booking.getId(),
-                method.toUpperCase(),
-                null,
-                booking.getStatus().name(),
-                actor,
-                "BookingService." + method + " executed by " + actor
+                    "Booking",
+                    booking.getId(),
+                    method.toUpperCase(),
+                    oldStatus,                    // ← now populated correctly
+                    booking.getStatus().name(),
+                    actor,
+                    "BookingService." + method + " executed by " + actor
             );
         }
         return result;
@@ -68,18 +130,74 @@ public class AuditAspect {
 
     @Around("carStatusUpdate()")
     public Object auditCarStatusUpdate(ProceedingJoinPoint pjp) throws Throwable {
-        Object[] args  = pjp.getArgs();
-        UUID carId     = args.length > 0 ? (UUID) args[0] : null;
+        Object[] args    = pjp.getArgs();
+        UUID carId       = args.length > 0 ? (UUID) args[0] : null;
         String newStatus = args.length > 1 ? args[1].toString() : "UNKNOWN";
-        String actor   = resolveActor();
+        String actor     = resolveActor();
+
+        // ── Capture old status BEFORE executing ──────────────────────────────
+        String oldStatus = null;
+        if (carId != null) {
+            try {
+                CarResponse existing = carService.getById(carId);
+                oldStatus = existing.getStatus().name();
+            } catch (Exception e) {
+                log.warn("Could not fetch old car status for audit: {}", e.getMessage());
+            }
+        }
 
         Object result = pjp.proceed();
 
         auditLogService.log(
-            "Car", carId, "STATUS_CHANGE",
-            null, newStatus, actor,
-            "Car status changed to " + newStatus + " by " + actor
+                "Car", carId, "STATUS_CHANGE",
+                oldStatus,   // ← now populated correctly
+                newStatus,
+                actor,
+                "Car status changed to " + newStatus + " by " + actor
         );
+        return result;
+    }
+
+
+    @Around("carUpdate() || carCreate() || carDelete()")
+    public Object auditCarOperation(ProceedingJoinPoint pjp) throws Throwable {
+        String method = pjp.getSignature().getName();
+        String actor  = resolveActor();
+        Object[] args = pjp.getArgs();
+
+        // Capture old state before update
+        String oldValue = null;
+        if (method.equals("update") && args.length > 0 && args[0] instanceof UUID carId) {
+            try {
+                CarResponse existing = carService.getById(carId);
+                oldValue = existing.toString();
+            } catch (Exception e) {
+                log.warn("Could not fetch old car state for audit: {}", e.getMessage());
+            }
+        }
+
+        Object result = pjp.proceed();
+
+        String newValue = null;
+        String entityId = null;
+
+        if (result instanceof CarResponse car) {
+            newValue = car.toString();
+            entityId = car.getId().toString();
+        } else if (method.equals("delete") && args.length > 0) {
+            entityId = args[0].toString();
+        }
+
+        auditLogService.log(
+                "Car",
+                entityId != null ? UUID.fromString(entityId) : null,
+                method.toUpperCase(),
+                oldValue,
+                newValue,
+                actor,
+                "CarService." + method + " executed by " + actor
+        );
+
         return result;
     }
 

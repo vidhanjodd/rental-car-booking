@@ -22,7 +22,6 @@ public class BookingEventProducer {
     @Value("${app.kafka.topics.booking-events}")
     private String bookingEventsTopic;
 
-    // ── Publish helpers for each transition ──────────────────────────────
 
     public void publishCreated(Booking booking) {
         publish(buildEvent(booking, BookingEvent.EventType.BOOKING_CREATED, null));
@@ -40,10 +39,8 @@ public class BookingEventProducer {
         publish(buildEvent(booking, BookingEvent.EventType.BOOKING_COMPLETED, BookingStatus.CONFIRMED));
     }
 
-    // ── Core send ─────────────────────────────────────────────────────────
 
     private void publish(BookingEvent event) {
-        // Key = bookingId ensures all events for a booking go to the same partition → ordered
         String key = event.getBookingId().toString();
 
         CompletableFuture<SendResult<String, BookingEvent>> future =
@@ -62,7 +59,6 @@ public class BookingEventProducer {
         });
     }
 
-    // ── Builder ───────────────────────────────────────────────────────────
 
     private BookingEvent buildEvent(Booking booking, BookingEvent.EventType type, BookingStatus previousStatus) {
         return BookingEvent.builder()

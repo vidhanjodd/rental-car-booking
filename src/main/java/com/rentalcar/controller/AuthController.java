@@ -27,7 +27,6 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // POST /api/auth/register
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Register a new user account")
@@ -35,21 +34,18 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
-    // POST /api/auth/login
     @PostMapping("/login")
     @Operation(summary = "Login with username/email + password, returns JWT tokens")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    // POST /api/auth/refresh
     @PostMapping("/refresh")
     @Operation(summary = "Exchange a valid refresh token for a new access token")
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refreshToken(request.getRefreshToken()));
     }
 
-    // POST /api/auth/logout
     @PostMapping("/logout")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Revoke all refresh tokens for the authenticated user")
@@ -59,7 +55,6 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
-    // PUT /api/auth/change-password
     @PutMapping("/change-password")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Change password — invalidates all existing refresh tokens")
@@ -70,7 +65,6 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 
-    // GET /api/auth/me
     @GetMapping("/me")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Get the currently authenticated user's basic info")

@@ -8,10 +8,7 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 
-/**
- * Extends the base Kafka config with manual ACK and concurrency settings
- * for the booking event consumer.
- */
+
 @Configuration
 public class KafkaConsumerConfig {
 
@@ -25,10 +22,8 @@ public class KafkaConsumerConfig {
         var factory = new ConcurrentKafkaListenerContainerFactory<String, Object>();
         factory.setConsumerFactory(consumerFactory);
 
-        // Manual ACK — we explicitly call ack.acknowledge() after processing
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
 
-        // Process up to 3 partitions concurrently
         factory.setConcurrency(3);
 
         return factory;

@@ -30,5 +30,5 @@ import org.springframework.context.annotation.Configuration;
     in           = SecuritySchemeIn.HEADER
 )
 public class OpenApiConfig {
-    // Configuration is annotation-driven — no beans needed
+
 }

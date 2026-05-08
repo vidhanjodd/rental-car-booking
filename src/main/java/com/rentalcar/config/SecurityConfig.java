@@ -61,6 +61,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_URLS).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/cars/**").permitAll()
+                .requestMatchers(HttpMethod.POST,   "/api/cars/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/cars/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/cars/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH,  "/api/cars/**").hasRole("ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )

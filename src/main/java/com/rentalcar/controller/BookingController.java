@@ -29,7 +29,6 @@ public class BookingController {
 
     private final BookingService bookingService;
 
-    // POST /api/bookings — create (PENDING)
     @PostMapping
     @Operation(summary = "Create a new booking — acquires pessimistic lock on the car to prevent double-booking")
     public ResponseEntity<BookingResponse> create(
@@ -39,7 +38,6 @@ public class BookingController {
             .body(bookingService.create(request, principal));
     }
 
-    // GET /api/bookings/my — list my bookings
     @GetMapping("/my")
     @Operation(summary = "Get the authenticated user's bookings (paginated)")
     public ResponseEntity<PageResponse<BookingResponse>> myBookings(
@@ -49,7 +47,6 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getMyBookings(principal, page, size));
     }
 
-    // GET /api/bookings/{id}
     @GetMapping("/{id}")
     @Operation(summary = "Get a booking by ID — accessible by owner or admin only")
     public ResponseEntity<BookingResponse> getById(
@@ -58,7 +55,6 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getById(id, principal));
     }
 
-    // PATCH /api/bookings/{id}/confirm — PENDING → CONFIRMED
     @PatchMapping("/{id}/confirm")
     @Operation(summary = "Confirm a PENDING booking → CONFIRMED")
     public ResponseEntity<BookingResponse> confirm(
@@ -67,7 +63,6 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.confirm(id, principal));
     }
 
-    // PATCH /api/bookings/{id}/cancel — PENDING/CONFIRMED → CANCELLED
     @PatchMapping("/{id}/cancel")
     @Operation(summary = "Cancel a booking → CANCELLED (releases car back to AVAILABLE)")
     public ResponseEntity<BookingResponse> cancel(
@@ -77,7 +72,6 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.cancel(id, reason, principal));
     }
 
-    // PATCH /api/bookings/{id}/complete — CONFIRMED → COMPLETED (admin only)
     @PatchMapping("/{id}/complete")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "[ADMIN] Mark a CONFIRMED booking as COMPLETED")
@@ -87,7 +81,6 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.complete(id, principal));
     }
 
-    // GET /api/bookings — all bookings (admin)
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "[ADMIN] List all bookings with optional status filter")

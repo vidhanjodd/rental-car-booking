@@ -230,6 +230,13 @@ public class BookingService {
         }
     }
 
+    // BookingService.java — add this method
+    @Transactional(readOnly = true)
+    public BookingResponse getByIdInternal(UUID id) {
+        return toResponse(bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", id)));
+    }
+
     // ── Response mapper ────────────────────────────────────────────────────
 
     public BookingResponse toResponse(Booking b) {

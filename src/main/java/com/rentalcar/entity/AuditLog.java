@@ -30,22 +30,22 @@ public class AuditLog {
     private UUID id;
 
     @Column(name = "entity_type", nullable = false, length = 50)
-    private String entityType;    // "Booking", "Car", "User"
+    private String entityType;
 
     @Column(name = "entity_id", nullable = false)
     private UUID entityId;
 
     @Column(name = "action", nullable = false, length = 100)
-    private String action;        // "CREATE", "STATUS_CHANGE", "UPDATE", "DELETE"
+    private String action;
 
     @Column(name = "old_value", columnDefinition = "TEXT")
-    private String oldValue;      // JSON snapshot before
+    private String oldValue;
 
     @Column(name = "new_value", columnDefinition = "TEXT")
-    private String newValue;      // JSON snapshot after
+    private String newValue;
 
     @Column(name = "actor", length = 100)
-    private String actor;         // username or "SYSTEM"
+    private String actor;
 
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
@@ -54,5 +54,5 @@ public class AuditLog {
     private Instant createdAt;
 
     @Column(name = "details", columnDefinition = "TEXT")
-    private String details;       // human-readable description
+    private String details;
 }

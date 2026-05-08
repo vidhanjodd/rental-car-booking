@@ -21,12 +21,7 @@ public class BookingEventConsumer {
 
     private final AuditLogService auditLogService;
 
-    /**
-     * Consumes booking-events with:
-     *  - 3 automatic retries (100ms, 200ms, 400ms backoff)
-     *  - Dead-letter topic (booking-events.DLT) after all retries exhausted
-     *  - Manual ACK — offset only committed on successful processing
-     */
+
     @RetryableTopic(
         attempts = "3",
         backoff   = @Backoff(delay = 100, multiplier = 2),
@@ -49,10 +44,10 @@ public class BookingEventConsumer {
 
         try {
             processEvent(event);
-            ack.acknowledge();   // commit offset only on success
+            ack.acknowledge();
         } catch (Exception ex) {
             log.error("Error processing booking event {}: {}", event.getBookingId(), ex.getMessage(), ex);
-            throw ex;   // re-throw so @RetryableTopic kicks in
+            throw ex;
         }
     }
 
@@ -65,13 +60,11 @@ public class BookingEventConsumer {
         }
     }
 
-    /** Handles messages that failed all retries — logs and stores for manual review */
     @DltHandler
     public void handleDlt(
             @Payload BookingEvent event,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         log.error("DLT: booking event {} of type {} ended up in dead-letter topic {}",
             event.getBookingId(), event.getEventType(), topic);
-        // In production: alert, persist to dead_letter_events table, page on-call
     }
 }

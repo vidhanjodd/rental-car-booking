@@ -22,7 +22,7 @@ public class AuditLogService {
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper       objectMapper;
 
-    // ── Kafka-driven audit entries ─────────────────────────────────────────
+
 
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -46,7 +46,9 @@ public class AuditLogService {
             .entityType("Booking")
             .entityId(event.getBookingId())
             .action("STATUS_CHANGE")
-            .oldValue("PENDING")
+            .oldValue(event.getPreviousStatus() != null
+                        ? event.getPreviousStatus().name()
+                        : "UNKNOWN")
             .newValue("CONFIRMED")
             .actor(event.getUsername())
             .details("Booking confirmed")
@@ -84,7 +86,6 @@ public class AuditLogService {
             .build());
     }
 
-    // ── Manual audit entries (called from AOP aspect) ──────────────────────
 
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)

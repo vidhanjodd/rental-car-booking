@@ -27,12 +27,7 @@ public class CarController {
 
     private final CarService carService;
 
-    // ── Public endpoints (no auth) ─────────────────────────────────────────
 
-    /**
-     * GET /api/cars/search?city=Chennai&startDate=2024-12-01&endDate=2024-12-05
-     * Results are Redis-cached — identical queries don't hit the DB.
-     */
     @GetMapping("/search")
     @Operation(summary = "Search available cars — results are Redis-cached for 10 minutes")
     public ResponseEntity<PageResponse<CarResponse>> search(
@@ -54,7 +49,6 @@ public class CarController {
         return ResponseEntity.ok(carService.getAllCities());
     }
 
-    // ── Admin endpoints ────────────────────────────────────────────────────
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
