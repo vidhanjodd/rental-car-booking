@@ -41,19 +41,6 @@ public class BookingService {
     private final CarRepository     carRepository;
     private final UserRepository    userRepository;
     private final BookingEventProducer bookingEventProducer;
-    // ── Create booking (PENDING) ───────────────────────────────────────────
-    //
-    // Concurrency strategy:
-    //  1. Validate date inputs
-    //  2. Acquire PESSIMISTIC_WRITE lock on the car row (SELECT FOR UPDATE)
-    //  3. Re-check car status and date overlap inside the lock
-    //  4. Mark car BOOKED, save booking as PENDING
-    //  5. Evict car-search cache so stale availability isn't served
-    //
-    // If two threads race, one gets the lock; the other waits.
-    // When the first commits, the second sees the updated car status/booking
-    // and throws CarNotAvailableException.
-    // ──────────────────────────────────────────────────────────────────────
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Retryable(
@@ -68,7 +55,6 @@ public class BookingService {
         User user = userRepository.findById(principal.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User", principal.getId()));
 
-        // Pessimistic lock — only one thread proceeds past here for this car
         Car car = carRepository.findByIdWithPessimisticLock(req.getCarId())
             .orElseThrow(() -> new ResourceNotFoundException("Car", req.getCarId()));
 
@@ -96,7 +82,6 @@ public class BookingService {
             .notes(req.getNotes())
             .build();
 
-        // Mark car as BOOKED
         car.setStatus(CarStatus.BOOKED);
         carRepository.save(car);
 
@@ -108,7 +93,6 @@ public class BookingService {
         return toResponse(saved);
     }
 
-    // ── Confirm booking (PENDING → CONFIRMED) ─────────────────────────────
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public BookingResponse confirm(UUID bookingId, UserPrincipal principal) {
@@ -119,11 +103,11 @@ public class BookingService {
         transitionStatus(booking, BookingStatus.CONFIRMED);
 
         Booking saved = bookingRepository.save(booking);
+        bookingEventProducer.publishConfirmed(saved);
         log.info("Booking confirmed: {}", bookingId);
         return toResponse(saved);
     }
 
-    // ── Cancel booking (PENDING/CONFIRMED → CANCELLED) ────────────────────
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @CacheEvict(value = RedisConfig.CACHE_CAR_SEARCH, allEntries = true)
@@ -132,15 +116,16 @@ public class BookingService {
             .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingId));
 
         assertOwnerOrAdmin(booking, principal);
+        BookingStatus previousStatus = booking.getStatus();
         transitionStatus(booking, BookingStatus.CANCELLED);
         booking.setCancellationReason(reason);
 
-        // Release the car back to AVAILABLE
         Car car = booking.getCar();
         car.setStatus(CarStatus.AVAILABLE);
         carRepository.save(car);
 
         Booking saved = bookingRepository.save(booking);
+        bookingEventProducer.publishCancelled(saved, previousStatus);
         log.info("Booking cancelled: {} — reason: {}", bookingId, reason);
         return toResponse(saved);
     }
@@ -155,12 +140,12 @@ public class BookingService {
         assertAdmin(principal);
         transitionStatus(booking, BookingStatus.COMPLETED);
 
-        // Return car to AVAILABLE pool
         Car car = booking.getCar();
         car.setStatus(CarStatus.AVAILABLE);
         carRepository.save(car);
 
         Booking saved = bookingRepository.save(booking);
+        bookingEventProducer.publishCompleted(saved);
         log.info("Booking completed: {}", bookingId);
         return toResponse(saved);
     }
@@ -190,7 +175,6 @@ public class BookingService {
         return PageResponse.from(result.map(this::toResponse));
     }
 
-    // ── State machine ──────────────────────────────────────────────────────
 
     private void transitionStatus(Booking booking, BookingStatus target) {
         BookingStatus current = booking.getStatus();
@@ -200,7 +184,6 @@ public class BookingService {
         booking.setStatus(target);
     }
 
-    // ── Guard helpers ──────────────────────────────────────────────────────
 
     private void assertOwnerOrAdmin(Booking booking, UserPrincipal principal) {
         boolean isOwner = booking.getUser().getId().equals(principal.getId());
@@ -228,14 +211,12 @@ public class BookingService {
         }
     }
 
-    // BookingService.java — add this method
     @Transactional(readOnly = true)
     public BookingResponse getByIdInternal(UUID id) {
         return toResponse(bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", id)));
     }
 
-    // ── Response mapper ────────────────────────────────────────────────────
 
     public BookingResponse toResponse(Booking b) {
         return BookingResponse.builder()

@@ -160,7 +160,7 @@ public class CarService {
     })
     public void delete(UUID id) {
         Car car = findCarOrThrow(id);
-        carRepository.delete(car);   // triggers @SQLDelete → sets deleted=true
+        carRepository.delete(car);
         log.info("Car soft-deleted: {}", id);
     }
 

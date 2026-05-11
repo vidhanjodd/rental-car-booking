@@ -74,11 +74,6 @@ public class Car extends BaseEntity {
     @Builder.Default
     private boolean deleted = false;
 
-    /**
-     * Optimistic locking — prevents lost updates under concurrent access.
-     * JPA increments this on every UPDATE; a stale-state write throws
-     * ObjectOptimisticLockingFailureException.
-     */
     @Builder.Default
     @Column(name = "version", nullable = false)
     private Long version = 0L;

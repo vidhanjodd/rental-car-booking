@@ -43,7 +43,6 @@ public class AuthService {
     @Value("${app.jwt.refresh-expiration-ms}")
     private long refreshExpirationMs;
 
-    // ── Register ──────────────────────────────────────────────────────────
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -75,11 +74,9 @@ public class AuthService {
         return buildAuthResponse(user, accessToken, refreshToken);
     }
 
-    // ── Login ─────────────────────────────────────────────────────────────
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        // Spring Security validates credentials and throws on failure
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
                 request.getUsernameOrEmail(),
@@ -91,7 +88,6 @@ public class AuthService {
         User user = userRepository.findByUsername(principal.getUsername())
             .orElseThrow(() -> new ResourceNotFoundException("User", principal.getUsername()));
 
-        // Revoke any existing refresh token and issue a fresh one
         refreshTokenRepository.revokeAllUserTokens(user.getId());
         String accessToken  = jwtTokenProvider.generateAccessToken(principal);
         String refreshToken = createRefreshToken(user).getToken();
@@ -100,7 +96,6 @@ public class AuthService {
         return buildAuthResponse(user, accessToken, refreshToken);
     }
 
-    // ── Refresh token ──────────────────────────────────────────────────────
 
     @Transactional
     public AuthResponse refreshToken(String rawRefreshToken) {
@@ -114,7 +109,6 @@ public class AuthService {
         User user = stored.getUser();
         UserPrincipal principal = UserPrincipal.from(user);
 
-        // Rotate: revoke old, issue new
         stored.setRevoked(true);
         refreshTokenRepository.save(stored);
 
@@ -124,7 +118,6 @@ public class AuthService {
         return buildAuthResponse(user, newAccessToken, newRefreshToken);
     }
 
-    // ── Logout ─────────────────────────────────────────────────────────────
 
     @Transactional
     public void logout(UUID userId) {
@@ -132,7 +125,6 @@ public class AuthService {
         log.info("User logged out: {}", userId);
     }
 
-    // ── Change password ────────────────────────────────────────────────────
 
     @Transactional
     public void changePassword(UUID userId, String currentPassword, String newPassword) {
@@ -146,12 +138,10 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        // Invalidate all refresh tokens — force re-login everywhere
         refreshTokenRepository.revokeAllUserTokens(userId);
         log.info("Password changed for user: {}", user.getUsername());
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
 
     private RefreshToken createRefreshToken(User user) {
         RefreshToken token = RefreshToken.builder()

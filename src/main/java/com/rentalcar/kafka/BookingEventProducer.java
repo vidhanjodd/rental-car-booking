@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
@@ -18,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 public class BookingEventProducer {
 
     private final KafkaTemplate<String, BookingEvent> kafkaTemplate;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Value("${app.kafka.topics.booking-events}")
     private String bookingEventsTopic;
@@ -41,6 +45,11 @@ public class BookingEventProducer {
 
 
     private void publish(BookingEvent event) {
+        applicationEventPublisher.publishEvent(event);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleBookingEvent(BookingEvent event) {
         String key = event.getBookingId().toString();
 
         CompletableFuture<SendResult<String, BookingEvent>> future =
