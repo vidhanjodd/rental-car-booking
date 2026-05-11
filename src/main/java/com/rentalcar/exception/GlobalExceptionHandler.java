@@ -3,6 +3,7 @@ package com.rentalcar.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentConversionNotSupportedException;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -125,4 +127,14 @@ public class GlobalExceptionHandler {
             .build();
         return ResponseEntity.status(status).body(body);
     }
+
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class,
+                   MethodArgumentConversionNotSupportedException.class})
+public ResponseEntity<ErrorResponse> handleTypeMismatch(
+        MethodArgumentTypeMismatchException ex, WebRequest req) {
+    String msg = String.format("Invalid value '%s' for parameter '%s'",
+        ex.getValue(), ex.getName());
+    return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_PARAMETER", msg, req);
+}
+
 }

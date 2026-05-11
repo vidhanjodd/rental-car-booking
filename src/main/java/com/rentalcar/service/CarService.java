@@ -32,13 +32,7 @@ public class CarService {
 
     private final CarRepository carRepository;
 
-    // ── Search (cached) ────────────────────────────────────────────────────
 
-    /**
-     * Car search results are cached in Redis under the "car-search" cache.
-     * Key includes all search params so different queries get separate cache entries.
-     * 'unless' condition prevents caching empty result pages.
-     */
     @Cacheable(
         value  = RedisConfig.CACHE_CAR_SEARCH,
         key    = "T(String).join('-', "
@@ -55,7 +49,6 @@ public class CarService {
     public PageResponse<CarResponse> searchCars(CarSearchRequest req, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("dailyRate").ascending());
 
-        // Default to today/tomorrow if no dates given
         LocalDate start = req.getStartDate() != null ? req.getStartDate() : LocalDate.now().plusDays(1);
         LocalDate end   = req.getEndDate()   != null ? req.getEndDate()   : start.plusDays(1);
 
@@ -70,7 +63,6 @@ public class CarService {
         return PageResponse.from(results.map(this::toResponse));
     }
 
-    // ── Get by ID (cached) ─────────────────────────────────────────────────
 
     @Cacheable(value = RedisConfig.CACHE_CAR_DETAILS, key = "#id")
     @Transactional(readOnly = true)
@@ -78,7 +70,6 @@ public class CarService {
         return toResponse(findCarOrThrow(id));
     }
 
-    // ── List all cities (cached) ───────────────────────────────────────────
 
     @Cacheable(value = RedisConfig.CACHE_CITIES)
     @Transactional(readOnly = true)
@@ -86,7 +77,6 @@ public class CarService {
         return carRepository.findAllCities();
     }
 
-    // ── Create (admin) ─────────────────────────────────────────────────────
 
     @Transactional
     @CacheEvict(value = RedisConfig.CACHE_CAR_SEARCH, allEntries = true)
@@ -116,7 +106,6 @@ public class CarService {
         return toResponse(saved);
     }
 
-    // ── Update (admin) ─────────────────────────────────────────────────────
 
     @Transactional
     @Caching(evict = {
@@ -126,7 +115,6 @@ public class CarService {
     public CarResponse update(UUID id, CarRequest req) {
         Car car = findCarOrThrow(id);
 
-        // Check license plate uniqueness only if it changed
         if (!car.getLicensePlate().equalsIgnoreCase(req.getLicensePlate())
                 && carRepository.existsByLicensePlate(req.getLicensePlate())) {
             throw new ResourceAlreadyExistsException(
@@ -149,7 +137,6 @@ public class CarService {
         return toResponse(carRepository.save(car));
     }
 
-    // ── Update status (admin) ──────────────────────────────────────────────
 
     @Transactional
     @Caching(evict = {
@@ -165,7 +152,6 @@ public class CarService {
         return toResponse(car);
     }
 
-    // ── Delete (admin, soft) ───────────────────────────────────────────────
 
     @Transactional
     @Caching(evict = {
@@ -178,7 +164,6 @@ public class CarService {
         log.info("Car soft-deleted: {}", id);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
 
     private Car findCarOrThrow(UUID id) {
         return carRepository.findById(id)

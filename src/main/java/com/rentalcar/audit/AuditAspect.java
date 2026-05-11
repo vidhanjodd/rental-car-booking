@@ -53,56 +53,15 @@ public class AuditAspect {
     @Pointcut("execution(public * com.rentalcar.service.CarService.delete(..))")
     private void carDelete() {}
 
-//    @Around("bookingCreate() || bookingConfirm() || bookingCancel() || bookingComplete()")
-//    public Object auditBookingOperation(ProceedingJoinPoint pjp) throws Throwable {
-//        String method = pjp.getSignature().getName();
-//        String actor  = resolveActor();
-//
-//        Object result = pjp.proceed();
-//
-//        if (result instanceof BookingResponse booking) {
-//            auditLogService.log(
-//                "Booking",
-//                booking.getId(),
-//                method.toUpperCase(),
-//                null,
-//                booking.getStatus().name(),
-//                actor,
-//                "BookingService." + method + " executed by " + actor
-//            );
-//        }
-//        return result;
-//    }
-//
-//    @Around("carStatusUpdate()")
-//    public Object auditCarStatusUpdate(ProceedingJoinPoint pjp) throws Throwable {
-//        Object[] args  = pjp.getArgs();
-//        UUID carId     = args.length > 0 ? (UUID) args[0] : null;
-//        String newStatus = args.length > 1 ? args[1].toString() : "UNKNOWN";
-//        String actor   = resolveActor();
-//
-//        Object result = pjp.proceed();
-//
-//        auditLogService.log(
-//            "Car", carId, "STATUS_CHANGE",
-//            null, newStatus, actor,
-//            "Car status changed to " + newStatus + " by " + actor
-//        );
-//        return result;
-//    }
-
 
     @Around("bookingCreate() || bookingConfirm() || bookingCancel() || bookingComplete()")
     public Object auditBookingOperation(ProceedingJoinPoint pjp) throws Throwable {
         String method = pjp.getSignature().getName();
         String actor  = resolveActor();
 
-        // ── Capture old status BEFORE executing ──────────────────────────────
         String oldStatus = null;
         Object[] args = pjp.getArgs();
 
-        // For confirm/cancel/complete, first arg is the bookingId (UUID)
-        // For create, there is no old status
         if (!method.equals("create") && args.length > 0 && args[0] instanceof UUID bookingId) {
             try {
                 BookingResponse existing = bookingService.getByIdInternal(bookingId);
@@ -112,14 +71,14 @@ public class AuditAspect {
             }
         }
 
-        Object result = pjp.proceed();   // execute the real method
+        Object result = pjp.proceed();
 
         if (result instanceof BookingResponse booking) {
             auditLogService.log(
                     "Booking",
                     booking.getId(),
                     method.toUpperCase(),
-                    oldStatus,                    // ← now populated correctly
+                    oldStatus,
                     booking.getStatus().name(),
                     actor,
                     "BookingService." + method + " executed by " + actor
@@ -135,7 +94,6 @@ public class AuditAspect {
         String newStatus = args.length > 1 ? args[1].toString() : "UNKNOWN";
         String actor     = resolveActor();
 
-        // ── Capture old status BEFORE executing ──────────────────────────────
         String oldStatus = null;
         if (carId != null) {
             try {
@@ -150,7 +108,7 @@ public class AuditAspect {
 
         auditLogService.log(
                 "Car", carId, "STATUS_CHANGE",
-                oldStatus,   // ← now populated correctly
+                oldStatus,
                 newStatus,
                 actor,
                 "Car status changed to " + newStatus + " by " + actor
@@ -165,7 +123,6 @@ public class AuditAspect {
         String actor  = resolveActor();
         Object[] args = pjp.getArgs();
 
-        // Capture old state before update
         String oldValue = null;
         if (method.equals("update") && args.length > 0 && args[0] instanceof UUID carId) {
             try {

@@ -20,14 +20,11 @@ import java.util.UUID;
 @Repository
 public interface CarRepository extends JpaRepository<Car, UUID> {
 
-    /**
-     * Find cars available for the requested date range and city.
-     * Excludes cars that have PENDING or CONFIRMED bookings overlapping the window.
-     */
+
     @Query("""
         SELECT c FROM Car c
         WHERE c.status = 'AVAILABLE'
-            AND (:city IS NULL OR LOWER(c.city) = LOWER(CAST(:city AS string)))
+          AND (:city IS NULL OR LOWER(c.city) = LOWER(CAST(:city AS String)))
           AND (:category IS NULL OR c.category = :category)
           AND (:minRate IS NULL OR c.dailyRate >= :minRate)
           AND (:maxRate IS NULL OR c.dailyRate <= :maxRate)
@@ -50,10 +47,7 @@ public interface CarRepository extends JpaRepository<Car, UUID> {
         Pageable pageable
     );
 
-    /**
-     * Pessimistic write lock — used in booking confirmation
-     * to prevent two threads from booking the same car simultaneously.
-     */
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Car c WHERE c.id = :id")
     Optional<Car> findByIdWithPessimisticLock(@Param("id") UUID id);

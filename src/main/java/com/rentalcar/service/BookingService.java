@@ -145,7 +145,6 @@ public class BookingService {
         return toResponse(saved);
     }
 
-    // ── Complete booking (CONFIRMED → COMPLETED) ──────────────────────────
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @CacheEvict(value = RedisConfig.CACHE_CAR_SEARCH, allEntries = true)
@@ -166,7 +165,6 @@ public class BookingService {
         return toResponse(saved);
     }
 
-    // ── Queries ────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public BookingResponse getById(UUID id, UserPrincipal principal) {

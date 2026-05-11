@@ -19,7 +19,7 @@ import java.util.List;
         @Index(name = "idx_cars_city_status", columnList = "city, status")
     }
 )
-@SQLDelete(sql = "UPDATE cars SET deleted = true WHERE id = ? AND version = ?")
+@SQLDelete(sql = "UPDATE cars SET deleted = true WHERE id = ?")
 @SQLRestriction("deleted = false")
 @Getter
 @Setter
@@ -79,9 +79,9 @@ public class Car extends BaseEntity {
      * JPA increments this on every UPDATE; a stale-state write throws
      * ObjectOptimisticLockingFailureException.
      */
-    @Version
+    @Builder.Default
     @Column(name = "version", nullable = false)
-    private Long version;
+    private Long version = 0L;
 
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Booking> bookings;
